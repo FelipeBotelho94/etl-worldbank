@@ -96,21 +96,3 @@ def fetch_countries() -> List[Dict[str, Any]]:
             time.sleep(tempo_espera)
             
     raise RuntimeError("Falha ao extrair países após 3 tentativas.")
-
-# --- ÁREA DE EXECUÇÃO (O gatilho do script) ---
-if __name__ == "__main__":
-    print("Iniciando o processo de Extração (Extract)...")
-    
-    # 1. Manda executar a extração de países e salva na variável
-    paises_extraidos = fetch_countries()
-    
-    # 2. Manda executar a extração de todos os 5 indicadores e salva na variável
-    indicadores_extraidos = extract_all_indicators()
-    
-    # 3. Mostra um resumo final para provar que deu tudo certo!
-    print("\n=== RESUMO FINAL DA EXTRAÇÃO ===")
-    print(f"Total de Países/Agregados extraídos: {len(paises_extraidos)}")
-    
-    if indicadores_extraidos:
-        for indicador, dados in indicadores_extraidos.items():
-            print(f"Indicador {indicador}: {len(dados)} registros em memória.")
