@@ -4,7 +4,8 @@ from dataclasses import dataclass
 
 @dataclass
 class Settings:
-    api_base_url: str = os.getenv("API_BASE_URL", "http://api.worldbank.org/v2")
+    # O .rstrip('/') garante que 'v2/' vire 'v2', evitando a barra dupla '//' no extract
+    api_base_url: str = os.getenv("API_BASE_URL", "https://api.worldbank.org/v2").rstrip('/')
     db_host: str = os.getenv("DB_HOST", "localhost")
     db_port: int = int(os.getenv("DB_PORT", 5432))
     db_name: str = os.getenv("DB_NAME", "etl_db")

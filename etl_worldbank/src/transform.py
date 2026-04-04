@@ -62,9 +62,11 @@ def transform_all_countries(raw_data: List[Dict[str, Any]]) -> List[Dict[str, An
     for record in raw_data:
         item = transform_country_record(record)
         iso2 = item["iso2_code"]
+        regiao = item["region"]
 
-        # T1: Filtro de Entidade (Exatos 2 caracteres)
-        if not iso2 or len(iso2) != 2:
+        # T1: Filtro de Entidade
+        # Se não tem ISO2 ou se a região for "Aggregates" (Agregados Regionais do Banco Mundial), descarta!
+        if not iso2 or regiao == "Aggregates":
             skipped += 1
             continue
 

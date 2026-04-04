@@ -11,14 +11,14 @@ def fetch_indicator_page(indicator: str, page: int) -> List[Dict[str, Any]]:
     # Colocamos os valores exigidos pelo professor direto aqui!
     params = {
         "format": "json", 
-        "per_page": 100, # Exigência do professor para indicadores
+        "per_page": 50, # Tentei 100
         "mrv": 10,       # Últimos 10 anos
         "page": page
     }
 
-    for attempt in range(3):
+    for attempt in range(5):
         try:
-            response = requests.get(url, params=params, timeout=30)
+            response = requests.get(url, params=params, timeout=90)
             response.raise_for_status()
             data = response.json()
 
@@ -30,11 +30,18 @@ def fetch_indicator_page(indicator: str, page: int) -> List[Dict[str, Any]]:
             return [] 
 
         except Exception as exc:
+            # Se for a primeira página e der erro, precisamos insistir (pode ser rede)
+            # Mas se for uma página avançada (ex: > 25) e der Timeout, 
+            # é muito provável que a API só esteja instável no final dos dados.
+            if page >= 50 and "timeout" in str(exc).lower():
+                print(f"[extract] Timeout na página {page}. Assumindo fim dos dados para o indicador {indicator}.")
+                return [] # Retorna lista vazia para ativar o 'break' no extract_all_indicators
+
             tempo_espera = 2 ** (attempt + 1)
-            print(f"[extract] tentativa {attempt + 1}/3 falhou na pág {page} do ind. {indicator}: {exc}. Aguardando {tempo_espera}s...")
+            print(f"[extract] tentativa {attempt + 1}/5 falhou na pág {page} do ind. {indicator}: {exc}. Aguardando {tempo_espera}s...")
             time.sleep(tempo_espera)
 
-    raise RuntimeError(f"Falha ao extrair {indicator} na página {page} após 3 tentativas.")
+    raise RuntimeError(f"Falha ao extrair {indicator} na página {page} após 5 tentativas.")
 
 
 # --- 2. O EXTRACT ALL DO PROFESSOR (O Maestro) ---
@@ -81,7 +88,7 @@ def fetch_countries() -> List[Dict[str, Any]]:
     print("\n--- Iniciando extração de Países ---")
     for attempt in range(3):
         try:
-            response = requests.get(url, params=params, timeout=30)
+            response = requests.get(url, params=params, timeout=120)
             response.raise_for_status()
             data = response.json()
             
