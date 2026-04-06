@@ -1,4 +1,4 @@
-📌 1. Visão Geral
+#1. Visão Geral
 O que o pipeline faz: Este projeto consiste em um pipeline de ETL (Extract, Transform, Load) construído em Python, conteinerizado com Docker. Ele automatiza a extração de dados brutos, aplica regras estritas de limpeza/deduplicação e carrega as métricas finais em um banco de dados relacional PostgreSQL.
 
 Qual API utiliza: O pipeline consome dados públicos da World Bank API V2 (Banco Mundial), extraindo a série histórica dos últimos 10 anos de indicadores socioeconômicos pré-definidos.
