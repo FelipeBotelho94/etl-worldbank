@@ -17,31 +17,31 @@ O banco de dados foi estruturado em um Modelo Dimensional (Star Schema adaptado)
 #### 1. Tabela countries (Dimensão)
 Armazena o cadastro validado das entidades geográficas (apenas países).
 
-iso2_code: CHAR(2) 🔑 (Primary Key) - Código ISO de 2 letras do país
-iso3_code: CHAR(3) - Código ISO de 3 letras do país
-name: VARCHAR(100) (NOT NULL) - Nome padronizado do país
-region: VARCHAR(80) - Região geográfica
-income_group: VARCHAR(60) - Classificação do nível de renda
-capital: VARCHAR(80) - Nome da capital do país
-longitude: NUMERIC(9,4) - Coordenada X (com 4 casas decimais)
-latitude: NUMERIC(9,4) - Coordenada Y (com 4 casas decimais)
-loaded_at: TIMESTAMP (DEFAULT NOW) - Data e hora exata da inserção
+- iso2_code: CHAR(2) 🔑 (Primary Key) - Código ISO de 2 letras do país
+- iso3_code: CHAR(3) - Código ISO de 3 letras do país
+- name: VARCHAR(100) (NOT NULL) - Nome padronizado do país
+- region: VARCHAR(80) - Região geográfica
+- income_group: VARCHAR(60) - Classificação do nível de renda
+- capital: VARCHAR(80) - Nome da capital do país
+- longitude: NUMERIC(9,4) - Coordenada X (com 4 casas decimais)
+- latitude: NUMERIC(9,4) - Coordenada Y (com 4 casas decimais)
+- loaded_at: TIMESTAMP (DEFAULT NOW) - Data e hora exata da inserção
 
 #### 2. Tabela indicators (Dimensão)
 Armazena o catálogo das métricas extraídas da API.
 
-indicator_code: VARCHAR(40) 🔑 (Primary Key) - Código único do indicador (ex: NY.GDP.PCAP.KD)
-indicator_name: TEXT (NOT NULL) - Nome descritivo da métrica
-unit: VARCHAR(30) - Unidade de medida do indicador
+- indicator_code: VARCHAR(40) 🔑 (Primary Key) - Código único do indicador (ex: NY.GDP.PCAP.KD)
+- indicator_name: TEXT (NOT NULL) - Nome descritivo da métrica
+- unit: VARCHAR(30) - Unidade de medida do indicador
 
 #### 3. Tabela wdi_facts (Tabela Fato)
 Armazena a série histórica dos indicadores por país e por ano. A chave primária composta garante a inexistência de duplicatas.
 
-iso2_code: CHAR(2) 🔑 (Primary Key) | 🔗 (Foreign Key -> countries.iso2_code) - Relaciona com countries.iso2_code
-indicator_code: VARCHAR(40) 🔑 (Primary Key) | 🔗 (Foreign Key -> indicators.indicator_code) - Relaciona com indicators.indicator_code 
-year: SMALLINT 🔑 (Primary Key) (NOT NULL) - Ano de referência da medição
-value: NUMERIC(18,4) - Valor medido (suporta até 14 dígitos e 4 decimais)
-loaded_at: TIMESTAMP (DEFAULT NOW) - Data e hora exata da inserção/atualização
+- iso2_code: CHAR(2) 🔑 (Primary Key) | 🔗 (Foreign Key -> countries.iso2_code) - Relaciona com countries.iso2_code
+- indicator_code: VARCHAR(40) 🔑 (Primary Key) | 🔗 (Foreign Key -> indicators.indicator_code) - Relaciona com indicators.indicator_code 
+- year: SMALLINT 🔑 (Primary Key) (NOT NULL) - Ano de referência da medição
+- value: NUMERIC(18,4) - Valor medido (suporta até 14 dígitos e 4 decimais)
+- loaded_at: TIMESTAMP (DEFAULT NOW) - Data e hora exata da inserção/atualização
 
 Nota de Integridade: A Chave Primária Composta (iso2_code, indicator_code, year) em wdi_facts garante a regra de negócio de que não haverá duplicatas para o mesmo indicador de um país em um mesmo ano.
 
@@ -150,24 +150,29 @@ ORDER BY c.name, f.year;
 ## 5. Consultas de Validação (Saídas Reais)
 Abaixo estão os resultados das consultas de validação exigidas, executadas logo após a carga inicial do pipeline.
 
-P1
+### Volume de países carregados (esperado: entre 200 e 220)
+<img width="278" height="300" alt="P1" src="https://github.com/user-attachments/assets/987e201e-dde9-4ce9-97b0-8e1b1edda7af" />
 
-P2
+### Distribuição por grupo de renda (confirma filtro de agregados)
+<img width="346" height="362" alt="P2" src="https://github.com/user-attachments/assets/cf314c5e-6a87-4910-8e66-0c3d52dc5454" />
 
-P3 
+### Volume e taxa de nulos por indicador
+<img width="344" height="384" alt="P3" src="https://github.com/user-attachments/assets/8f930f39-c9ad-4aaf-8cec-071f0a284253" />
 
-P4 
+### PIB per capita dos 5 países de referência ao longo dos anos
+<img width="704" height="658" alt="image" src="https://github.com/user-attachments/assets/94ed41ec-379c-4766-97b0-b0d26cfb2df2" />
 
-P5
+name	           year     value
+Brazil	         2014	    8841.52
+China	           2022    	11560.21
+Germany	         2022	    41345.00
+Nigeria	         2022    	2150.12
+United States 	 2022	    65231.50
+(Resumo das linhas retornadas demonstrando os 5 países ao longo da série histórica).
 
-
-Resultado: 
-name	        year	value
-Brazil	        2014	8841.52
-China	        2022	11560.21
-Germany	        2022	41345.00
-Nigeria	        2022	2150.12
-United States	2022	65231.50
+### Idempotência
+<img width="444" height="558" alt="image" src="https://github.com/user-attachments/assets/222471f4-99d9-4369-9f7a-4736fbb6e0af" />
+10750 as 2 vezes
 
 ## Decisões Técnicas e Trade-offs
 Durante o desenvolvimento deste pipeline, algumas decisões arquiteturais foram tomadas para balancear a confiabilidade do sistema e a complexidade do código. A principal escolha técnica foi a adoção da abordagem ORM (DeclarativeBase) do SQLAlchemy em detrimento do SQLAlchemy Core. O trade-off dessa decisão foi trocar uma leve vantagem de performance na inserção em massa por uma modelagem de dados muito mais legível e manutenível. O uso do ORM facilitou a abstração das tabelas em classes Python e permitiu a implementação elegante da rotina de upsert (on_conflict_do_update), garantindo a idempotência da carga caso o pipeline seja executado múltiplas vezes.
