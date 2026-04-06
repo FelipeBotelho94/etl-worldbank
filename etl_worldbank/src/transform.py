@@ -1,10 +1,6 @@
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-# ==========================================
-# 1. FERRAMENTAS DE APOIO (Estilo do Professor)
-# ==========================================
-
 def safe_str(value: Any) -> Optional[str]:
     """T2: Aplicar strip(), substituir vazias por None."""
     if value is None:
@@ -31,9 +27,7 @@ def safe_int(value: Any) -> Optional[int]:
         return None
 
 
-# ==========================================
-# 2. TRANSFORMAÇÃO DE PAÍSES (Dimensão)
-# ==========================================
+# TRANSFORMAÇÃO DE PAÍSES (Dimensão)
 
 def transform_country_record(record: Dict[str, Any]) -> Dict[str, Any]:
     """Transforma um único registro de país."""
@@ -55,31 +49,38 @@ def transform_country_record(record: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 def transform_all_countries(raw_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """O 'Gerente' dos países."""
     transformed = []
     skipped = 0
 
     for record in raw_data:
         item = transform_country_record(record)
-        iso2 = item["iso2_code"]
-        regiao = item["region"]
+        iso2 = item.get("iso2_code")
+        regiao = item.get("region")
+        renda = item.get("income_group")
 
-        # T1: Filtro de Entidade
-        # Se não tem ISO2 ou se a região for "Aggregates" (Agregados Regionais do Banco Mundial), descarta!
+        # REGRA 1: Filtro de Entidade (Excluir Agregados)
+        
+        # Filtro brando exclui apenas "Aggregates" e não classificados.
+        # Mantém continentes abertos para não perder países de referência da query (US e NG).
         if not iso2 or regiao == "Aggregates":
+            skipped += 1
+            continue
+
+        # REGRA 2: Filtro de Renda (LIC, MIC, HIC)
+
+        # O Banco Mundial usa os termos: 'Low income', 'Lower middle income', 'Upper middle income', 'High income'
+        # Se for 'Not classified' ou vier vazio, joga fora.
+        if not renda or renda == "Not classified":
             skipped += 1
             continue
 
         transformed.append(item)
 
     print(f"\n[transform] Países válidos transformados: {len(transformed)}")
-    print(f"[transform] Agregados regionais descartados: {skipped}")
+    print(f"[transform] Países/Agregados descartados: {skipped}")
     return transformed
 
-
-# ==========================================
-# 3. TRANSFORMAÇÃO DE FATOS (Série Histórica)
-# ==========================================
+# TRANSFORMAÇÃO DE FATOS (Série Histórica)
 
 def transform_fact_record(record: Dict[str, Any], indicator_code: str) -> Dict[str, Any]:
     """Transforma um único registro de indicador/fato."""
@@ -92,9 +93,9 @@ def transform_fact_record(record: Dict[str, Any], indicator_code: str) -> Dict[s
         "value": safe_float(record.get("value")) # O professor disse que pode ser nulo!
     }
 
-def transform_all_facts(raw_indicators_dict: Dict[str, List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
-    """O 'Gerente' dos Fatos (Com Deduplicação T5)."""
-    transformed = {} # Usamos dicionário em vez de lista para facilitar a T5
+# Adicione 'valid_iso2_codes' aqui nos parênteses:
+def transform_all_facts(raw_indicators_dict: Dict[str, List[Dict[str, Any]]], valid_iso2_codes: set) -> List[Dict[str, Any]]:
+    transformed = {} 
     skipped = 0
     duplicatas = 0
     ano_atual = datetime.now().year
@@ -102,34 +103,27 @@ def transform_all_facts(raw_indicators_dict: Dict[str, List[Dict[str, Any]]]) ->
     for indicador_code, lista_registros in raw_indicators_dict.items():
         for record in lista_registros:
             item = transform_fact_record(record, indicador_code)
-            
             iso2 = item["iso2_code"]
             ano = item["year"]
             
-            # T1: Filtro de Entidade (2 caracteres)
-            if not iso2 or len(iso2) != 2:
+            # Se o código não for de um país aprovado, joga fora
+            if not iso2 or iso2 not in valid_iso2_codes:
                 skipped += 1
                 continue
                 
-            # T4: Filtro temporal (2010 até hoje)
+            # Filtro temporal (2010 até hoje)
             if ano is None or not (2010 <= ano <= ano_atual):
                 skipped += 1
                 continue
                 
-            # T5: Deduplicação (A chave primária do banco)
+            # Deduplicação
             chave_composta = (iso2, indicador_code, ano)
-            
             if chave_composta in transformed:
                 duplicatas += 1
-            
-                # Ao salvar/sobrescrever fora do 'else', garantimos que a versão 
-                # que fica no dicionário é a mais recente/última iterada.
             transformed[chave_composta] = item
 
     print(f"\n[transform] Fatos válidos transformados: {len(transformed)}")
-    print(f"[transform] Fatos descartados (fora do escopo): {skipped}")
-    print(f"[transform] Duplicatas removidas: {duplicatas}")
-    
+    print(f"[transform] Fatos descartados (fora do escopo ou agregados): {skipped}")
     return list(transformed.values())
 
 

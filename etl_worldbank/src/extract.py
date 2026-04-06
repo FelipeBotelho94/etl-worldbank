@@ -8,11 +8,10 @@ def fetch_indicator_page(indicator: str, page: int) -> List[Dict[str, Any]]:
     # Tirei o per_page dos parâmetros da função e fixei no params abaixo
     url = f"{settings.api_base_url}/country/all/indicator/{indicator}"
     
-    # Colocamos os valores exigidos pelo professor direto aqui!
     params = {
         "format": "json", 
-        "per_page": 50, # Tentei 100
-        "mrv": 10,       # Últimos 10 anos
+        "per_page": 100, 
+        "mrv": 10,       
         "page": page
     }
 
@@ -33,7 +32,7 @@ def fetch_indicator_page(indicator: str, page: int) -> List[Dict[str, Any]]:
             # Se for a primeira página e der erro, precisamos insistir (pode ser rede)
             # Mas se for uma página avançada (ex: > 25) e der Timeout, 
             # é muito provável que a API só esteja instável no final dos dados.
-            if page >= 50 and "timeout" in str(exc).lower():
+            if page >= 27 and "timeout" in str(exc).lower():
                 print(f"[extract] Timeout na página {page}. Assumindo fim dos dados para o indicador {indicator}.")
                 return [] # Retorna lista vazia para ativar o 'break' no extract_all_indicators
 
@@ -44,7 +43,6 @@ def fetch_indicator_page(indicator: str, page: int) -> List[Dict[str, Any]]:
     raise RuntimeError(f"Falha ao extrair {indicator} na página {page} após 5 tentativas.")
 
 
-# --- 2. O EXTRACT ALL DO PROFESSOR (O Maestro) ---
 def extract_all_indicators() -> Dict[str, List[Dict[str, Any]]]:
     todos_dados = {}
     
@@ -62,7 +60,7 @@ def extract_all_indicators() -> Dict[str, List[Dict[str, Any]]]:
         print(f"\n--- Iniciando extração do indicador: {indicador} ---")
         
         for page in range(1, 1000): 
-            # Tiramos o settings.indicators_per_page daqui
+        
             page_data = fetch_indicator_page(indicador, page)
 
             if not page_data:
@@ -82,7 +80,6 @@ def extract_all_indicators() -> Dict[str, List[Dict[str, Any]]]:
 def fetch_countries() -> List[Dict[str, Any]]:
     url = f"{settings.api_base_url}/country"
     
-    # Colocamos o 300 direto aqui, sem chamar o settings!
     params = {"format": "json", "per_page": 300}
     
     print("\n--- Iniciando extração de Países ---")
