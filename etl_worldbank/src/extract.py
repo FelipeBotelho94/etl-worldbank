@@ -3,7 +3,6 @@ import requests
 from typing import List, Dict, Any
 from config import settings
 
-# --- 1. O FETCH DO PROFESSOR (Adaptado para Indicadores) ---
 def fetch_indicator_page(indicator: str, page: int) -> List[Dict[str, Any]]:
     # Tirei o per_page dos parâmetros da função e fixei no params abaixo
     url = f"{settings.api_base_url}/country/all/indicator/{indicator}"
@@ -75,8 +74,6 @@ def extract_all_indicators() -> Dict[str, List[Dict[str, Any]]]:
 
     return todos_dados
 
-
-# --- 3. EXTRAÇÃO DE PAÍSES (Uma única chamada) ---
 def fetch_countries() -> List[Dict[str, Any]]:
     url = f"{settings.api_base_url}/country"
     
